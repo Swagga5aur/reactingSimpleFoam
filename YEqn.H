@@ -12,11 +12,10 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 {
     reaction->correct();
     Qdot = reaction->Qdot();
-    volScalarField Yt(0.0*Y[0]);
 
     forAll(Y, i)
     {
-        if (i != inertIndex && composition.active(i))
+        if (composition.solve(i))
         {
             volScalarField& Yi = Y[i];
 
@@ -26,22 +25,17 @@ tmp<fv::convectionScheme<scalar>> mvConvection
               - fvm::laplacian(turbulence->muEff(), Yi)
              ==
                 reaction->R(Yi)
-              + fvOptions(rho, Yi)
+              + fvModels.source(rho, Yi)
             );
 
             YiEqn.relax();
 
-            fvOptions.constrain(YiEqn);
+            fvConstraints.constrain(YiEqn);
 
             YiEqn.solve("Yi");
 
-            fvOptions.correct(Yi);
-
-            Yi.max(0.0);
-            Yt += Yi;
+            fvConstraints.constrain(Yi);
         }
     }
-
-    Y[inertIndex] = scalar(1) - Yt;
-    Y[inertIndex].max(0.0);
 }
+composition.normalise();

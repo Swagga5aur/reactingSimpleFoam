@@ -23,7 +23,7 @@ License
 
 Application
     simpleReactingParcelFoam
-
+   
 Description
     Steady state solver for compressible, turbulent flow with reacting,
     multiphase particle clouds and optional sources/constraints.
@@ -31,15 +31,15 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
-#include "fluidThermo.H"
-#include "turbulentFluidThermoModel.H"
-#include "psiReactionThermo.H"
-#include "CombustionModel.H"
+#include "fluidReactionThermo.H"
+#include "dynamicMomentumTransportModel.H"
+#include "fluidReactionThermophysicalTransportModel.H"
+#include "combustionModel.H"
 #include "IOporosityModelList.H"
-#include "fvOptions.H"
+#include "fvModels.H"
+#include "fvConstraints.H"
 #include "simpleControl.H"
-#include "pressureControl.H"
-#include "IOporosityModelList.H"
+#include "pressureReference.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
     #include "createControl.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
-    #include "createZones.H"
     #include "initContinuityErrs.H"
 
     turbulence->validate();

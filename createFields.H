@@ -66,8 +66,8 @@ autoPtr<compressible::turbulenceModel> turbulence
 
 dimensionedScalar initialMass = fvc::domainIntegrate(rho);
 
-Info<< "Creating combustion model\n" << endl;
-autoPtr<CombustionModel<psiReactionThermo>> combustion
+Info<< "Creating reaction model\n" << endl;
+autoPtr<CombustionModel<psiReactionThermo>> reaction
 (
     CombustionModel<psiReactionThermo>::New(thermo, turbulence())
 );

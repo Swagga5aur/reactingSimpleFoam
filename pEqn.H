@@ -1,38 +1,22 @@
 {
     const volScalarField& psi = thermo.psi();
 
-    const volScalarField rAU("rAU", 1.0/UEqn.A());
-    const surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
-
-    tmp<volScalarField> rAtU
-    (
-        simple.consistent()
-      ? volScalarField::New("rAtU", 1.0/(1.0/rAU - UEqn.H1()))
-      : tmp<volScalarField>(nullptr)
-    );
-    tmp<surfaceScalarField> rhorAtUf
-    (
-        simple.consistent()
-      ? surfaceScalarField::New("rhoRAtUf", fvc::interpolate(rho*rAtU()))
-      : tmp<surfaceScalarField>(nullptr)
-    );
-
-    const volScalarField& rAAtU = simple.consistent() ? rAtU() : rAU;
-    const surfaceScalarField& rhorAAtUf =
-        simple.consistent() ? rhorAtUf() : rhorAUf;
-
-    volVectorField HbyA(constrainHbyA(rAU*UEqn.H(), U, p));
+    tmp<volVectorField> tHbyA;
+    if (pressureImplicitPorosity)
+    {
+        tHbyA = constrainHbyA(trTU()&UEqn.H(), U, p);
+    }
+    else
+    {
+        tHbyA = constrainHbyA(trAU()*UEqn.H(), U, p);
+    }
+    volVectorField& HbyA = tHbyA.ref();
 
     tUEqn.clear();
 
     bool closedVolume = false;
 
-    surfaceScalarField phiHbyA
-    (
-        "phiHbyA",
-        fvc::interpolate(rho)*fvc::flux(HbyA)
-    );
-
+    surfaceScalarField phiHbyA("phiHbyA", fvc::flux(rho*HbyA));
     MRF.makeRelative(fvc::interpolate(rho), phiHbyA);
 
     closedVolume = adjustPhi(phiHbyA, U, p);
@@ -40,10 +24,22 @@
     while (simple.correctNonOrthogonal())
     {
         tmp<fvScalarMatrix> tpEqn;
+
+        if (pressureImplicitPorosity)
         {
             tpEqn =
             (
-                fvm::laplacian(rhorAAtUf, p)
+                fvm::laplacian(rho*trTU(), p)
+              + fvModels.source(psi, p, rho.name())
+             ==
+                fvc::div(phiHbyA)
+            );
+        }
+        else
+        {
+            tpEqn =
+            (
+                fvm::laplacian(rho*trAU(), p)
               + fvModels.source(psi, p, rho.name())
              ==
                 fvc::div(phiHbyA)
@@ -71,7 +67,14 @@
     // Explicitly relax pressure for momentum corrector
     p.relax();
 
-    U = HbyA - rAAtU*fvc::grad(p);
+    if (pressureImplicitPorosity)
+    {
+        U = HbyA - (trTU() & fvc::grad(p));
+    }
+    else
+    {
+        U = HbyA - trAU()*fvc::grad(p);
+    }
 
     U.correctBoundaryConditions();
     fvConstraints.constrain(U);
@@ -82,8 +85,9 @@
     // to obey overall mass continuity
     if (closedVolume)
     {
-        p += (initialMass - fvc::domainIntegrate(psi*p))
+        p += (initialMass - fvc::domainIntegrate(thermo.rho()))
             /fvc::domainIntegrate(psi);
+   	p.correctBoundaryConditions();
     }
 
     rho = thermo.rho();

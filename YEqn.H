@@ -12,10 +12,11 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 {
     reaction->correct();
     Qdot = reaction->Qdot();
+    volScalarField Yt(0.0*Y[0]);
 
     forAll(Y, i)
     {
-        if (composition.solve(i))
+     	if (composition.solve(i))
         {
             volScalarField& Yi = Y[i];
 
@@ -35,7 +36,11 @@ tmp<fv::convectionScheme<scalar>> mvConvection
             YiEqn.solve("Yi");
 
             fvConstraints.constrain(Yi);
+
+            Yi.max(0.0);
+	    Yi.min(1.0);
+            Yt += Yi;
         }
     }
+    composition.normalise();
 }
-composition.normalise();

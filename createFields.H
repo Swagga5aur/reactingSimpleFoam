@@ -8,8 +8,6 @@ thermo.validate(args.executable(), "h", "e");
 basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
-volScalarField& p = thermo.p();
-
 volScalarField rho
 (
     IOobject
@@ -36,6 +34,8 @@ volVectorField U
     ),
     mesh
 );
+
+volScalarField& p = thermo.p();
 
 #include "compressibleCreatePhi.H"
 
@@ -66,8 +66,6 @@ thermophysicalTransport
     )
 );
 
-dimensionedScalar initialMass = fvc::domainIntegrate(rho);
-
 Info<< "Creating reaction model\n" << endl;
 autoPtr<combustionModel> reaction(combustionModel::New(thermo, turbulence()));
 
@@ -93,6 +91,8 @@ volScalarField Qdot
     mesh,
     dimensionedScalar("Qdot", dimEnergy/dimVolume/dimTime, 0.0)
 );
+
+dimensionedScalar initialMass = fvc::domainIntegrate(rho);
 
 #include "createMRF.H"
 #include "createFvModels.H"
